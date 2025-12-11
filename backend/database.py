@@ -1,113 +1,41 @@
-from motor.motor_asyncio import AsyncIOMotorClient
+from supabase import create_client, Client
 from typing import Optional
 import os
 from dotenv import load_dotenv
+import logging
 
 load_dotenv()
 
-# MongoDB connection
-mongo_url = os.environ.get('MONGO_URL')
-db_name = os.environ.get('DB_NAME', 'unbound_gateway')
+logger = logging.getLogger(__name__)
 
-client = AsyncIOMotorClient(mongo_url)
-db = client[db_name]
+# Supabase connection
+supabase_url: str = os.environ.get("SUPABASE_URL")
+supabase_key: str = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
 
-# Collections
-users_collection = db['users']
-rules_collection = db['rules']
-commands_collection = db['command_executions']
+if not supabase_url or not supabase_key:
+    raise ValueError("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set in environment")
+
+supabase: Client = create_client(supabase_url, supabase_key)
 
 async def init_db():
-    """Initialize database with indexes and seed data"""
+    """Initialize database with seed data"""
     
-    # Create indexes
-    await users_collection.create_index('api_key', unique=True)
-    await users_collection.create_index('user_id', unique=True)
-    await rules_collection.create_index('id', unique=True)
-    await rules_collection.create_index('order')
-    await commands_collection.create_index('user_id')
-    await commands_collection.create_index('timestamp')
-    
-    # Seed initial admin user if not exists
-    admin_exists = await users_collection.find_one({'role': 'admin'})
-    if not admin_exists:
-        admin_user = {
-            'user_id': 'admin_001',
-            'api_key': 'admin_key_123',
-            'name': 'Admin User',
-            'role': 'admin',
-            'credits': 100,
-            'created_at': None
-        }
-        await users_collection.insert_one(admin_user)
-        print("✓ Admin user seeded: admin_key_123")
-    
-    # Seed initial member users
-    member1_exists = await users_collection.find_one({'user_id': 'member_001'})
-    if not member1_exists:
-        member1 = {
-            'user_id': 'member_001',
-            'api_key': 'member_key_456',
-            'name': 'John Doe',
-            'role': 'member',
-            'credits': 10,
-            'created_at': None
-        }
-        await users_collection.insert_one(member1)
-        print("✓ Member user seeded: member_key_456")
-    
-    member2_exists = await users_collection.find_one({'user_id': 'member_002'})
-    if not member2_exists:
-        member2 = {
-            'user_id': 'member_002',
-            'api_key': 'member_key_789',
-            'name': 'Jane Smith',
-            'role': 'member',
-            'credits': 8,
-            'created_at': None
-        }
-        await users_collection.insert_one(member2)
-        print("✓ Member user seeded: member_key_789")
-    
-    # Seed initial rules
-    rules_count = await rules_collection.count_documents({})
-    if rules_count == 0:
-        initial_rules = [
-            {
-                'id': 'rule_001',
-                'pattern': r'^git (pull|fetch|status)',
-                'action': 'AUTO_ACCEPT',
-                'description': 'Safe git read operations',
-                'order': 1,
-                'created_at': '2024-07-15T10:30:00Z'
-            },
-            {
-                'id': 'rule_002',
-                'pattern': r'^rm -rf',
-                'action': 'AUTO_REJECT',
-                'description': 'Dangerous file deletion',
-                'order': 2,
-                'created_at': '2024-07-15T10:31:00Z'
-            },
-            {
-                'id': 'rule_003',
-                'pattern': r'^sudo',
-                'action': 'AUTO_REJECT',
-                'description': 'Elevated privileges',
-                'order': 3,
-                'created_at': '2024-07-15T10:32:00Z'
-            },
-            {
-                'id': 'rule_004',
-                'pattern': r'^ls|^pwd|^echo',
-                'action': 'AUTO_ACCEPT',
-                'description': 'Basic shell commands',
-                'order': 4,
-                'created_at': '2024-07-15T10:33:00Z'
+    # Check if admin user exists
+    try:
+        response = supabase.table("app_users").select("*").eq("api_key", "admin_key_2025").execute()
+        
+        if not response.data:
+            # Seed initial admin user
+            admin_user = {
+                'name': 'Admin User',
+                'role': 'admin',
+                'credits': 1000,
+                'api_key': 'admin_key_2025'
             }
-        ]
-        await rules_collection.insert_many(initial_rules)
-        print(f"✓ Seeded {len(initial_rules)} initial rules")
-
-async def get_db():
-    return db
+            supabase.table("app_users").insert(admin_user).execute()
+            logger.info("✓ Admin user seeded: admin_key_2025")
+        else:
+            logger.info("✓ Admin user already exists")
+    except Exception as e:
+        logger.error(f"Error initializing database: {e}")
+        raise

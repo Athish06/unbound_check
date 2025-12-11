@@ -1,0 +1,50 @@
+/* Unbound Command Gateway Styles */
+
+/* Selection color */
+::selection {
+    background-color: rgba(34, 211, 238, 0.3);
+    color: #ffffff;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #0f172a;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #475569;
+}
+
+/* Smooth transitions for interactive elements */
+button, input, textarea, select {
+    transition: all 0.2s ease;
+}
+
+/* Focus rings */
+input:focus, textarea:focus, select:focus {
+    outline: none;
+}
+
+/* Animation utilities */
+@keyframes pulse-glow {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.animate-pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+}
